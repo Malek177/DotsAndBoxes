@@ -1,0 +1,11 @@
+# Build outputs (rebuilt by `make`)
+*.o
+dotsandboxes
+tests/test_units
+
+# Editor / OS junk
+*~
+*.swp
+.vscode/
+.DS_Store
+vgcore.*
