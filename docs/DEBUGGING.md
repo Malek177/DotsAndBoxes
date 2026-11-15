@@ -13,7 +13,7 @@ Our time budget per bug: 0 min `-Wall -Werror` + Valgrind; 1–10 min informal;
 | 2. Unit tests | `./tests/test_units` | 177 checks on the rules and the input parser. |
 | 3. Full scripted games | `sh tests/run_scripted.sh` | Plays 4 complete games + 1 aborted game from files and checks each final score. |
 | 4. Valgrind on every game | `make valgrind` | Even when output looks right (see Case 1). |
-| 5. CI | GitHub Actions (`.github/workflows/ci.yml`) | Runs steps 1–4 on Ubuntu **and** on Alpine (musl) on every push. |
+| 5. CI | GitHub Actions (`.github/workflows/ci.yml`) | Runs steps 1–4 on Ubuntu on every push. |
 
 Current status: `make valgrind` → **0 errors, 21 allocs / 21 frees, no leaks possible**.
 
@@ -86,4 +86,4 @@ Log: [`logs/gdb_demo_session.txt`](logs/gdb_demo_session.txt)
 > Add every real bug here in the same format (failure, hypothesis, experiment, diagnosis, fix). Graders value a genuine log much more than demos.
 
 1. **GDB `continue 6` did nothing.** While writing the GDB demo we used `continue 6` to skip to the 7th move, but GDB stopped at the next call. Hypothesis: `continue N` only sets an ignore count when stopped *at a breakpoint*; after `finish` we were not. Fix: use the explicit `ignore 1 5` command. Confirmed: stops at the 7th move.
-2. **Possible `-Werror` failure on 32-bit Alpine.** `value < INT_MIN` on a `long` is "always false" where `long` is 32-bit, and GCC can warn about that; with `-Werror` the build would fail (= zero grade). Fix: guard the check with `#if LONG_MAX > INT_MAX`.
+2. **Possible `-Werror` failure on 32-bit Linux.** `value < INT_MIN` on a `long` is "always false" where `long` is 32-bit, and GCC can warn about that; with `-Werror` the build would fail (= zero grade). Fix: guard the check with `#if LONG_MAX > INT_MAX`.

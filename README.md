@@ -1,11 +1,11 @@
 # Dots and Boxes — CMPS 241 Course Project
 
-A console version of Dots and Boxes in C, built to run on Alpine Linux
-inside a VM and start automatically on boot.
+A console version of Dots and Boxes in C, built to run on a text-only Linux VM
+(we use Ubuntu in VirtualBox) and start automatically on boot.
 
 | Sprint | Content | Status |
 |---|---|---|
-| 1 | Two players (A vs B), 4×5 board, Makefile, tests, GDB/Valgrind, Alpine auto-start | ✅ |
+| 1 | Two players (A vs B), 4×5 board, Makefile, tests, GDB/Valgrind, VM auto-start | ✅ |
 | 2 | Hard-level bot + complexity analysis | ⏳ |
 | 3 (bonus) | Network play + multithreading | ⏳ |
 
@@ -32,7 +32,7 @@ order. Completing a box claims it, and you play again. Most boxes wins.
 1 .-.-. . . .
 ```
 
-Running on the VM: see [docs/ALPINE_SETUP.md](docs/ALPINE_SETUP.md).
+Running on the VM: see [docs/VM_SETUP.md](docs/VM_SETUP.md).
 
 ## Project structure
 
@@ -48,11 +48,11 @@ tests/
   run_scripted.sh    plays complete games from tests/scripts/*.in
   gdb_demo.gdb       GDB walkthrough used in the presentation
 scripts/
-  install_autostart.sh   start the game on boot (Alpine inittab or Ubuntu systemd)
+  install_autostart.sh   start the game on boot (Ubuntu systemd; also supports Alpine)
 docs/
   DEBUGGING.md     our GDB/Valgrind strategy, with real session logs
-  ALPINE_SETUP.md  VM setup, step by step
-.github/workflows/ci.yml   build + tests + Valgrind on every push (Ubuntu and Alpine)
+  VM_SETUP.md      Ubuntu VM setup, step by step, and problems we fixed
+.github/workflows/ci.yml   build + tests + Valgrind on every push
 ```
 
 Module dependencies (arrows = "includes"):
@@ -106,7 +106,6 @@ so there is no need to look at the rest of the board.
 * `tests/run_scripted.sh`: 4 complete random games (A wins, B wins, a 10–10 tie, and a
   game with invalid input mixed in) plus an aborted game. Each game is saved with its known final
   score, and the tests check that the game ends with that score.
-  code with the C program.
 * We checked that the tests can fail: breaking the bonus-turn rule makes 2 scripted
   games fail.
 

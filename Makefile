@@ -4,7 +4,7 @@
 #   make test       build + run unit tests and scripted full-game tests
 #   make valgrind   run full scripted games under Valgrind (must be clean)
 #   make gdb        start the game inside GDB
-#   make install    copy the game to /usr/local/bin (used on the Alpine VM)
+#   make install    copy the game to /usr/local/bin (used on the VM)
 #   make clean      remove everything that was built
 
 CC = gcc

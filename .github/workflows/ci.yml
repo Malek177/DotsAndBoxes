@@ -19,14 +19,3 @@ jobs:
         run: make test
       - name: Valgrind (no errors, no leaks)
         run: make valgrind
-
-  # Same checks on Alpine (musl libc), the OS the game ships on.
-  alpine:
-    runs-on: ubuntu-latest
-    container: alpine:latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install build tools
-        run: apk add --no-cache build-base valgrind
-      - name: Build and test
-        run: make && make test
