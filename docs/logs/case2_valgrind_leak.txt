@@ -1,0 +1,20 @@
+==1020== HEAP SUMMARY:
+==1020==     in use at exit: 185 bytes in 4 blocks
+==1020==   total heap usage: 6 allocs, 2 frees, 8,377 bytes allocated
+==1020== 
+==1020== 185 (56 direct, 129 indirect) bytes in 1 blocks are definitely lost in loss record 4 of 4
+==1020==    at 0x4846828: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==1020==    by 0x109B8A: board_create (board.c:39)
+==1020==    by 0x1098A9: game_play (game.c:45)
+==1020==    by 0x10971B: main (main.c:73)
+==1020== 
+==1020== LEAK SUMMARY:
+==1020==    definitely lost: 56 bytes in 1 blocks
+==1020==    indirectly lost: 129 bytes in 3 blocks
+==1020==      possibly lost: 0 bytes in 0 blocks
+==1020==    still reachable: 0 bytes in 0 blocks
+==1020==         suppressed: 0 bytes in 0 blocks
+==1020== 
+==1020== For lists of detected and suppressed errors, rerun with: -s
+==1020== ERROR SUMMARY: 1 errors from 1 contexts (suppressed: 0 from 0)
+after fix: no leaks

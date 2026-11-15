@@ -1,0 +1,39 @@
+Breakpoint 1 at 0x2261: file src/board.c, line 152.
+
+Breakpoint 1, board_draw_line (b=0x55555555a2a0, line=..., p=PLAYER_A) at src/board.c:152
+152	  assert(p == PLAYER_A || p == PLAYER_B);
+$1 = {orient = LINE_HORIZONTAL, r = 0, c = 0}
+$2 = PLAYER_A
+$3 = {rows = 1, cols = 2, h = 0x55555555a2e0 "", v = 0x55555555a300 "", owner = 0x55555555a320, score = {0, 0, 0}, lines_drawn = 0, total_lines = 7}
+$4 = {0, 0, 0, 0}
+$5 = {0, 0, 0}
+0x00005555555559b6 in game_play (rows=1, cols=2) at src/game.c:75
+75	    last_completed = board_draw_line(board, last, current);
+Value returned is $6 = 0
+
+Breakpoint 1, board_draw_line (b=0x55555555a2a0, line=..., p=PLAYER_A) at src/board.c:152
+152	  assert(p == PLAYER_A || p == PLAYER_B);
+$7 = {orient = LINE_VERTICAL, r = 0, c = 1}
+$8 = PLAYER_A
+Hardware watchpoint 2: b->score[1]
+
+Hardware watchpoint 2: b->score[1]
+
+Old value = 0
+New value = 1
+try_claim (b=0x55555555a2a0, r=0, c=0, p=PLAYER_A) at src/board.c:146
+146	    return 1;
+#0  try_claim (b=0x55555555a2a0, r=0, c=0, p=PLAYER_A) at src/board.c:146
+#1  0x00005555555563e2 in board_draw_line (b=0x55555555a2a0, line=..., p=PLAYER_A) at src/board.c:168
+#2  0x00005555555559b6 in game_play (rows=1, cols=2) at src/game.c:75
+#3  0x000055555555571c in main (argc=6, argv=0x7fffffff6f98) at src/main.c:73
+
+Hardware watchpoint 2: b->score[1]
+
+Old value = 1
+New value = 2
+try_claim (b=0x55555555a2a0, r=0, c=1, p=PLAYER_A) at src/board.c:146
+146	    return 1;
+$9 = {0, 2, 0}
+$10 = {1, 1}
+[Inferior 1 (process 1144) exited normally]
