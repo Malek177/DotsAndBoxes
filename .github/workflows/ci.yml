@@ -1,0 +1,32 @@
+# Builds the game, runs all tests and a Valgrind leak check on every push.
+# Results show up as a green check / red X next to each commit on GitHub.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Valgrind
+        run: sudo apt-get update && sudo apt-get install -y valgrind
+      - name: Build (warnings are errors)
+        run: make
+      - name: Unit + scripted game tests
+        run: make test
+      - name: Valgrind (no errors, no leaks)
+        run: make valgrind
+
+  # Same checks on Alpine (musl libc), the OS the game ships on.
+  alpine:
+    runs-on: ubuntu-latest
+    container: alpine:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build tools
+        run: apk add --no-cache build-base valgrind
+      - name: Build and test
+        run: make && make test
