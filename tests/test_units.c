@@ -1,9 +1,6 @@
 /*
  * test_units.c - Unit tests for the board rules and the input parser.
- *
  * Run with: make test
- * Every CHECK that fails prints its file:line, and the program exits with
- * status 1 so `make` (and GitHub Actions) report the failure.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,8 +20,6 @@ static int checks_failed = 0;
     }                                                                  \
   } while (0)
 
-/* Helper: validate + draw in one step. Returns boxes completed, or -1 if the
- * move was not legal. */
 static int play(Board *b, int r1, int c1, int r2, int c2, Player p) {
   Line line;
   if (board_validate_move(b, r1, c1, r2, c2, &line) != MOVE_OK) {
@@ -54,12 +49,12 @@ static void test_create(void) {
     }
   }
   board_destroy(b);
-  board_destroy(NULL); /* must be safe */
+  board_destroy(NULL);
 }
 
 static void test_validate(void) {
   printf("test_validate\n");
-  Board *b = board_create(4, 5); /* dots: rows 0..4, cols 0..5 */
+  Board *b = board_create(4, 5);
   Line line;
 
   CHECK(board_validate_move(b, -1, 0, 0, 0, &line) == MOVE_OUT_OF_RANGE);
@@ -70,21 +65,17 @@ static void test_validate(void) {
   CHECK(board_validate_move(b, 0, 0, 0, 2, &line) == MOVE_NOT_ADJACENT);
   CHECK(board_validate_move(b, 0, 0, 2, 0, &line) == MOVE_NOT_ADJACENT);
 
-  /* Corner dots of the grid are valid. */
   CHECK(board_validate_move(b, 4, 4, 4, 5, &line) == MOVE_OK);
   CHECK(board_validate_move(b, 3, 5, 4, 5, &line) == MOVE_OK);
 
-  /* Horizontal, dots in either order -> same normalized line. */
   CHECK(board_validate_move(b, 0, 4, 0, 3, &line) == MOVE_OK);
   CHECK(line.orient == LINE_HORIZONTAL && line.r == 0 && line.c == 3);
   CHECK(board_validate_move(b, 0, 3, 0, 4, &line) == MOVE_OK);
   CHECK(line.orient == LINE_HORIZONTAL && line.r == 0 && line.c == 3);
 
-  /* Vertical, either order. */
   CHECK(board_validate_move(b, 2, 1, 1, 1, &line) == MOVE_OK);
   CHECK(line.orient == LINE_VERTICAL && line.r == 1 && line.c == 1);
 
-  /* Already drawn, typed in the opposite direction. */
   CHECK(play(b, 0, 3, 0, 4, PLAYER_A) == 0);
   CHECK(board_validate_move(b, 0, 4, 0, 3, &line) == MOVE_ALREADY_DRAWN);
   board_destroy(b);
@@ -93,13 +84,13 @@ static void test_validate(void) {
 static void test_single_box(void) {
   printf("test_single_box\n");
   Board *b = board_create(1, 1);
-  CHECK(play(b, 0, 0, 0, 1, PLAYER_A) == 0); /* top */
+  CHECK(play(b, 0, 0, 0, 1, PLAYER_A) == 0);
   CHECK(board_box_sides(b, 0, 0) == 1);
-  CHECK(play(b, 0, 0, 1, 0, PLAYER_B) == 0); /* left */
-  CHECK(play(b, 1, 0, 1, 1, PLAYER_A) == 0); /* bottom */
+  CHECK(play(b, 0, 0, 1, 0, PLAYER_B) == 0);
+  CHECK(play(b, 1, 0, 1, 1, PLAYER_A) == 0);
   CHECK(board_box_sides(b, 0, 0) == 3);
   CHECK(!board_is_full(b));
-  CHECK(play(b, 0, 1, 1, 1, PLAYER_B) == 1); /* right: completes it */
+  CHECK(play(b, 0, 1, 1, 1, PLAYER_B) == 1);
   CHECK(board_box_owner(b, 0, 0) == PLAYER_B);
   CHECK(board_score(b, PLAYER_B) == 1);
   CHECK(board_score(b, PLAYER_A) == 0);
@@ -109,8 +100,7 @@ static void test_single_box(void) {
 
 static void test_double_box(void) {
   printf("test_double_box\n");
-  /* 1x2 board: draw everything except the middle wall, then the middle
-   * wall must complete BOTH boxes in one move. */
+  /* One line in the middle of a 1x2 board completes both boxes. */
   Board *b = board_create(1, 2);
   CHECK(play(b, 0, 0, 0, 1, PLAYER_A) == 0);
   CHECK(play(b, 0, 1, 0, 2, PLAYER_A) == 0);
@@ -128,14 +118,13 @@ static void test_double_box(void) {
 
 static void test_full_default_board(void) {
   printf("test_full_default_board\n");
-  /* Draw all 49 lines of the 4x5 board (row by row). Every box must end
-   * up claimed exactly once and the board must only be full at the end. */
+  /* Drawing all 49 lines must give out all 20 boxes. */
   Board *b = board_create(4, 5);
   int lines = 0;
   int boxes = 0;
   Player p = PLAYER_A;
   for (int r = 0; r <= 4; r++) {
-    for (int c = 0; c < 5; c++) { /* horizontal lines of dot row r */
+    for (int c = 0; c < 5; c++) {
       CHECK(!board_is_full(b));
       int got = play(b, r, c, r, c + 1, p);
       CHECK(got >= 0);
@@ -143,7 +132,7 @@ static void test_full_default_board(void) {
       lines++;
     }
     if (r < 4) {
-      for (int c = 0; c <= 5; c++) { /* vertical lines below dot row r */
+      for (int c = 0; c <= 5; c++) {
         int got = play(b, r, c, r + 1, c, p);
         CHECK(got >= 0);
         boxes += got;
@@ -166,7 +155,7 @@ static void test_parse_move(void) {
   CHECK(input_parse_move("  1   2 3 4  ", v) && v[0] == 1 && v[1] == 2 &&
         v[2] == 3 && v[3] == 4);
   CHECK(input_parse_move("1,2,3,4", v) && v[2] == 3);
-  CHECK(input_parse_move("-1 0 0 0", v) && v[0] == -1); /* board rejects it */
+  CHECK(input_parse_move("-1 0 0 0", v) && v[0] == -1);
   CHECK(!input_parse_move("", v));
   CHECK(!input_parse_move("1 2 3", v));
   CHECK(!input_parse_move("1 2 3 4 5", v));

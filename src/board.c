@@ -1,5 +1,5 @@
 /*
- * board.c - Implementation of the board state and rules (see board.h).
+ * board.c - Board state and game rules.
  */
 #include "board.h"
 
@@ -7,18 +7,17 @@
 #include <stdlib.h>
 
 struct Board {
-  int rows;              /* number of box rows    (dots: rows + 1) */
-  int cols;              /* number of box columns (dots: cols + 1) */
-  unsigned char *h;      /* (rows+1) x cols  horizontal lines, 1 = drawn */
-  unsigned char *v;      /* rows x (cols+1)  vertical lines,   1 = drawn */
-  Player *owner;         /* rows x cols      box owners */
-  int score[3];          /* indexed by Player; score[PLAYER_NONE] unused */
+  int rows;
+  int cols;
+  unsigned char *h;
+  unsigned char *v;
+  Player *owner;
+  int score[3];
   int lines_drawn;
   int total_lines;
 };
 
-/* ---- index helpers (2D -> 1D, row-major) -------------------------- */
-
+/* Turn (row, column) into a position in the 1D arrays. */
 static int h_index(const Board *b, int r, int c) { return r * b->cols + c; }
 static int v_index(const Board *b, int r, int c) { return r * (b->cols + 1) + c; }
 static int box_index(const Board *b, int r, int c) { return r * b->cols + c; }
@@ -30,8 +29,7 @@ static bool line_in_range(const Board *b, Line line) {
   return line.r >= 0 && line.r < b->rows && line.c >= 0 && line.c <= b->cols;
 }
 
-/* ---- creation / destruction ---------------------------------------- */
-
+/* Creating and freeing the board. */
 Board *board_create(int rows, int cols) {
   if (rows < MIN_SIZE || rows > MAX_SIZE || cols < MIN_SIZE || cols > MAX_SIZE) {
     return NULL;
@@ -42,12 +40,11 @@ Board *board_create(int rows, int cols) {
   }
   b->rows = rows;
   b->cols = cols;
-  /* calloc zero-fills: no lines drawn, every owner = PLAYER_NONE (0). */
   b->h = calloc((size_t)(rows + 1) * cols, sizeof(unsigned char));
   b->v = calloc((size_t)rows * (cols + 1), sizeof(unsigned char));
   b->owner = calloc((size_t)rows * cols, sizeof(Player));
   if (b->h == NULL || b->v == NULL || b->owner == NULL) {
-    board_destroy(b); /* free(NULL) is safe, so partial failure is fine */
+    board_destroy(b);
     return NULL;
   }
   b->score[PLAYER_NONE] = 0;
@@ -71,8 +68,7 @@ void board_destroy(Board *b) {
 int board_rows(const Board *b) { return b->rows; }
 int board_cols(const Board *b) { return b->cols; }
 
-/* ---- queries --------------------------------------------------------- */
-
+/* Reading the board. */
 bool board_has_line(const Board *b, Line line) {
   assert(line_in_range(b, line));
   if (line.orient == LINE_HORIZONTAL) {
@@ -83,10 +79,10 @@ bool board_has_line(const Board *b, Line line) {
 
 int board_box_sides(const Board *b, int r, int c) {
   assert(r >= 0 && r < b->rows && c >= 0 && c < b->cols);
-  return b->h[h_index(b, r, c)]          /* top    */
-       + b->h[h_index(b, r + 1, c)]      /* bottom */
-       + b->v[v_index(b, r, c)]          /* left   */
-       + b->v[v_index(b, r, c + 1)];     /* right  */
+  return b->h[h_index(b, r, c)]
+       + b->h[h_index(b, r + 1, c)]
+       + b->v[v_index(b, r, c)]
+       + b->v[v_index(b, r, c + 1)];
 }
 
 Player board_box_owner(const Board *b, int r, int c) {
@@ -101,8 +97,7 @@ int board_score(const Board *b, Player p) {
 
 bool board_is_full(const Board *b) { return b->lines_drawn == b->total_lines; }
 
-/* ---- moves ------------------------------------------------------------ */
-
+/* Checking and making moves. */
 static bool dot_in_range(const Board *b, int r, int c) {
   return r >= 0 && r <= b->rows && c >= 0 && c <= b->cols;
 }
@@ -117,13 +112,13 @@ MoveStatus board_validate_move(const Board *b, int r1, int c1, int r2,
   }
 
   Line line;
-  if (r1 == r2 && abs(c1 - c2) == 1) {          /* same row, neighbours */
+  if (r1 == r2 && abs(c1 - c2) == 1) {
     line.orient = LINE_HORIZONTAL;
     line.r = r1;
-    line.c = (c1 < c2) ? c1 : c2;               /* left dot */
-  } else if (c1 == c2 && abs(r1 - r2) == 1) {   /* same column, neighbours */
+    line.c = (c1 < c2) ? c1 : c2;
+  } else if (c1 == c2 && abs(r1 - r2) == 1) {
     line.orient = LINE_VERTICAL;
-    line.r = (r1 < r2) ? r1 : r2;               /* top dot */
+    line.r = (r1 < r2) ? r1 : r2;
     line.c = c1;
   } else {
     return MOVE_NOT_ADJACENT;
@@ -138,7 +133,6 @@ MoveStatus board_validate_move(const Board *b, int r1, int c1, int r2,
   return MOVE_OK;
 }
 
-/* Gives box (r,c) to p if all four sides are now drawn. Returns 1 if it did. */
 static int try_claim(Board *b, int r, int c, Player p) {
   if (board_box_sides(b, r, c) == 4 && b->owner[box_index(b, r, c)] == PLAYER_NONE) {
     b->owner[box_index(b, r, c)] = p;
@@ -148,6 +142,7 @@ static int try_claim(Board *b, int r, int c, Player p) {
   return 0;
 }
 
+/* Only the boxes on each side of the new line can be completed. */
 int board_draw_line(Board *b, Line line, Player p) {
   assert(p == PLAYER_A || p == PLAYER_B);
   assert(line_in_range(b, line));
@@ -156,18 +151,18 @@ int board_draw_line(Board *b, Line line, Player p) {
   int completed = 0;
   if (line.orient == LINE_HORIZONTAL) {
     b->h[h_index(b, line.r, line.c)] = 1;
-    if (line.r > 0) {          /* box above the line */
+    if (line.r > 0) {
       completed += try_claim(b, line.r - 1, line.c, p);
     }
-    if (line.r < b->rows) {    /* box below the line */
+    if (line.r < b->rows) {
       completed += try_claim(b, line.r, line.c, p);
     }
   } else {
     b->v[v_index(b, line.r, line.c)] = 1;
-    if (line.c > 0) {          /* box left of the line */
+    if (line.c > 0) {
       completed += try_claim(b, line.r, line.c - 1, p);
     }
-    if (line.c < b->cols) {    /* box right of the line */
+    if (line.c < b->cols) {
       completed += try_claim(b, line.r, line.c, p);
     }
   }

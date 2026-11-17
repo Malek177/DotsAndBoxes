@@ -1,10 +1,5 @@
 /*
- * game.c - Two-player game loop (see game.h).
- *
- * Rules implemented:
- *   - Players A and B alternate drawing one line between adjacent dots.
- *   - Completing a box (4th side) claims it; the same player moves again.
- *   - The game ends when every box is claimed; most boxes wins (ties allowed).
+ * game.c - The two-player game loop: turns, bonus turns and the winner.
  */
 #include "game.h"
 
@@ -19,8 +14,7 @@ static Player other_player(Player p) {
   return (p == PLAYER_A) ? PLAYER_B : PLAYER_A;
 }
 
-/* Keeps asking `current` for a move until a legal one is entered.
- * Returns false if input ended (EOF). */
+/* Keeps asking until the player types a legal move. */
 static bool ask_for_move(const Board *b, Player current, Line *out) {
   for (;;) {
     display_prompt(current);
@@ -51,9 +45,10 @@ GameResult game_play(int rows, int cols) {
   Player current = PLAYER_A;
   Line last = {LINE_HORIZONTAL, 0, 0};
   bool has_last = false;
-  int last_completed = 0; /* boxes completed by the previous move */
+  int last_completed = 0;
   GameResult result = GAME_FINISHED;
 
+  /* One turn per loop, until every box is taken. */
   display_title();
   while (!board_is_full(board)) {
     display_clear();
@@ -72,12 +67,14 @@ GameResult game_play(int rows, int cols) {
     }
     has_last = true;
 
+    /* Completing a box means the same player goes again. */
     last_completed = board_draw_line(board, last, current);
     if (last_completed == 0) {
-      current = other_player(current); /* no box: turn passes */
+      current = other_player(current);
     }
   }
 
+  /* Game over: show the final board and the winner. */
   if (result == GAME_FINISHED) {
     display_clear();
     display_board(board, has_last ? &last : NULL);

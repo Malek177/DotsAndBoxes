@@ -1,10 +1,6 @@
 /*
- * main.c - Entry point for Dots and Boxes (CMPS 241 project, Sprint 1).
- *
+ * main.c - Dots and Boxes, CMPS 241 project.
  * Usage: dotsandboxes [--plain] [--rows N] [--cols N] [--help]
- *   --plain    no colours / no screen clearing (used by tests and Valgrind)
- *   --rows N   number of box rows    (default 4, range 1..9)
- *   --cols N   number of box columns (default 5, range 1..9)
  */
 #include <stdbool.h>
 #include <stdio.h>
@@ -25,7 +21,6 @@ static void print_usage(const char *prog) {
          DEFAULT_COLS);
 }
 
-/* Parses a board dimension. Returns -1 if text is not a valid size. */
 static int parse_size(const char *text) {
   char *end;
   long value = strtol(text, &end, 10);
@@ -40,6 +35,7 @@ int main(int argc, char *argv[]) {
   int rows = DEFAULT_ROWS;
   int cols = DEFAULT_COLS;
 
+  /* Read the command-line options. */
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "--plain") == 0) {
       fancy = false;
@@ -56,7 +52,7 @@ int main(int argc, char *argv[]) {
       } else {
         cols = value;
       }
-      i++; /* skip the number we just consumed */
+      i++;
     } else if (strcmp(argv[i], "--help") == 0) {
       print_usage(argv[0]);
       return EXIT_SUCCESS;
@@ -69,6 +65,7 @@ int main(int argc, char *argv[]) {
 
   display_init(fancy, rows, cols);
 
+  /* Play games until the players say no. */
   for (;;) {
     GameResult result = game_play(rows, cols);
     if (result == GAME_ERROR) {

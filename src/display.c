@@ -1,10 +1,6 @@
 /*
- * display.c - Terminal output for Dots and Boxes (see display.h).
- *
- * Fancy mode draws bigger boxes and centres everything on the screen.
- * Plain mode keeps the compact layout from the spec's sample run.
+ * display.c - Drawing the board and messages on the terminal.
  */
-/* ioctl()/TIOCGWINSZ and STDOUT_FILENO are POSIX, not ISO C. */
 #define _POSIX_C_SOURCE 200809L
 
 #include "display.h"
@@ -14,33 +10,30 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-/* ANSI escape sequences (understood by the Linux console and xterm). */
 #define ANSI_RESET "\033[0m"
 #define ANSI_BOLD "\033[1m"
 #define ANSI_RED "\033[1;31m"
 #define ANSI_CYAN "\033[1;36m"
 #define ANSI_GREEN "\033[1;32m"
 #define ANSI_YELLOW "\033[33m"
-#define ANSI_CLEAR "\033[2J\033[H" /* clear screen, cursor to top-left */
+#define ANSI_CLEAR "\033[2J\033[H"
 
-/* Box size in fancy mode. Characters are about twice as tall as they are
- * wide, so 5 wide x 2 high looks roughly square. Change these to resize. */
-#define FANCY_CELL_W 5 /* '-' characters per horizontal line */
-#define FANCY_CELL_H 2 /* text rows per box */
+/* Size of one box in fancy mode: 5 characters wide, 2 lines tall. */
+#define FANCY_CELL_W 5
+#define FANCY_CELL_H 2
 
 #define TITLE "=== DOTS AND BOXES === By: Malek Sakr & Jasson Matta."
-#define LABEL_W 2           /* row label in front of each dot row: "0 " */
-#define FALLBACK_ROWS 24    /* used if the terminal size is unknown */
+#define LABEL_W 2
+#define FALLBACK_ROWS 24
 #define FALLBACK_COLS 80
 
-/* Module-private settings (static = internal linkage, invisible elsewhere). */
 static bool fancy_output = true;
-static int cell_w = 1;   /* 1 x 1 in plain mode = the spec's layout */
+static int cell_w = 1;
 static int cell_h = 1;
 static int grid_rows = DEFAULT_ROWS;
 static int grid_cols = DEFAULT_COLS;
-static int left_pad = 0; /* spaces printed before every line (centering) */
-static int term_width = FALLBACK_COLS; /* measured in display_clear() */
+static int left_pad = 0;
+static int term_width = FALLBACK_COLS;
 
 void display_init(bool fancy, int rows, int cols) {
   fancy_output = fancy;
@@ -50,51 +43,43 @@ void display_init(bool fancy, int rows, int cols) {
   cell_h = fancy ? FANCY_CELL_H : 1;
 }
 
-/* ---- layout helpers -------------------------------------------------- */
-
-/* Width of the drawn board in characters: label + dots + line segments. */
+/* Layout: how big the board is and how much space to leave around it. */
 static int board_width(void) { return LABEL_W + 1 + grid_cols * (cell_w + 1); }
 
-/* Approximate height of one full screen (title .. prompt) in lines. */
+/* Lines used: title, column numbers, dot rows, box rows, scores, message, prompt. */
 static int screen_height(void) {
-  return 2                             /* title + blank line */
-       + 1                             /* column numbers */
-       + (grid_rows + 1)               /* dot rows */
-       + grid_rows * cell_h            /* box rows */
-       + 4                             /* separator, 2 scores, separator */
-       + 1                             /* "plays again" message */
-       + 2;                            /* two-line prompt */
+  return 2
+       + 1
+       + (grid_rows + 1)
+       + grid_rows * cell_h
+       + 4
+       + 1
+       + 2;
 }
 
-/* Asks the terminal driver for the window size (system call via ioctl). */
 static void terminal_size(int *rows, int *cols) {
   struct winsize ws;
   if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0 && ws.ws_col > 0 && ws.ws_row > 0) {
     *rows = ws.ws_row;
     *cols = ws.ws_col;
-  } else { /* not a terminal (e.g. output redirected to a file) */
+  } else {
     *rows = FALLBACK_ROWS;
     *cols = FALLBACK_COLS;
   }
 }
 
-/* Prints the left margin that centres the block of output. */
 static void indent(void) {
   for (int i = 0; i < left_pad; i++) {
     putchar(' ');
   }
 }
 
-/* Prints n copies of character ch. */
 static void repeat(char ch, int n) {
   for (int i = 0; i < n; i++) {
     putchar(ch);
   }
 }
 
-/* ---- small output helpers --------------------------------------------- */
-
-/* Prints s wrapped in colour code only when fancy output is on. */
 static void put_colored(const char *color, const char *s) {
   if (fancy_output) {
     printf("%s%s%s", color, s, ANSI_RESET);
@@ -115,10 +100,8 @@ static bool same_line(const Line *a, Line b) {
   return a != NULL && a->orient == b.orient && a->r == b.r && a->c == b.c;
 }
 
-/* ---- screens ------------------------------------------------------------ */
-
+/* Title and clearing the screen. */
 void display_title(void) {
-  /* The title is wider than the board, so it gets its own centering. */
   if (fancy_output) {
     int pad = (term_width - (int)strlen(TITLE)) / 2;
     repeat(' ', pad > 0 ? pad : 0);
@@ -131,7 +114,6 @@ void display_clear(void) {
   if (!fancy_output) {
     return;
   }
-  /* Re-measure every screen, so resizing the window keeps it centred. */
   int term_rows, term_cols;
   terminal_size(&term_rows, &term_cols);
   term_width = term_cols;
@@ -141,13 +123,12 @@ void display_clear(void) {
 
   fputs(ANSI_CLEAR, stdout);
   for (int i = 0; i < pad_y; i++) {
-    putchar('\n'); /* vertical centering */
+    putchar('\n');
   }
-  display_title(); /* keep the title at the top of every fresh screen */
+  display_title();
 }
 
-/* Draws one line segment of `len` characters: `symbol` if drawn, else
- * spaces. The most recent move is highlighted in green. */
+/* Drawing the board. */
 static void put_segment(const Board *b, Line line, const Line *last,
                         char symbol, int len) {
   if (!board_has_line(b, line)) {
@@ -163,8 +144,6 @@ static void put_segment(const Board *b, Line line, const Line *last,
   }
 }
 
-/* Inside of one box on text row `row_in_box`: the owner's letter in the
- * middle of the first row, spaces everywhere else. */
 static void put_box_inside(const Board *b, int r, int c, int row_in_box) {
   Player owner = board_box_owner(b, r, c);
   if (owner == PLAYER_NONE || row_in_box != (cell_h - 1) / 2) {
@@ -182,7 +161,6 @@ void display_board(const Board *b, const Line *last) {
   int rows = board_rows(b);
   int cols = board_cols(b);
 
-  /* Column numbers, each above its dot. */
   indent();
   repeat(' ', LABEL_W);
   for (int c = 0; c <= cols; c++) {
@@ -195,7 +173,6 @@ void display_board(const Board *b, const Line *last) {
   printf("\n");
 
   for (int r = 0; r <= rows; r++) {
-    /* Dot row: "0 .-----.     ." */
     indent();
     char label[3] = {(char)('0' + r), ' ', '\0'};
     put_colored(ANSI_YELLOW, label);
@@ -209,10 +186,9 @@ void display_board(const Board *b, const Line *last) {
     printf("\n");
 
     if (r == rows) {
-      break; /* no boxes below the last row of dots */
+      break;
     }
 
-    /* Box rows: "  |  A  |     |" (cell_h of them) */
     for (int k = 0; k < cell_h; k++) {
       indent();
       repeat(' ', LABEL_W);
@@ -228,6 +204,7 @@ void display_board(const Board *b, const Line *last) {
   }
 }
 
+/* Scores, prompts and messages. */
 void display_scores(const Board *b) {
   indent();
   printf("Player ");
@@ -242,7 +219,7 @@ void display_scores(const Board *b) {
 void display_separator(void) {
   indent();
   if (fancy_output) {
-    repeat('*', board_width()); /* same width as the board */
+    repeat('*', board_width());
     printf("\n");
   } else {
     printf("**********************************************************\n");
@@ -255,7 +232,6 @@ void display_prompt(Player p) {
   printf("Player ");
   put_colored(player_color(p), s);
   if (fancy_output) {
-    /* Two short lines fit on the screen next to a centred board. */
     printf("'s turn. Enter two dots: row col row col\n");
     indent();
     printf("(e.g. 0 0 0 1) > ");
@@ -263,7 +239,7 @@ void display_prompt(Player p) {
     printf("'s turn. Enter the row and column of the first dot "
            "and the second dot (e.g. 0 0 0 1): ");
   }
-  fflush(stdout); /* prompt has no '\n', so flush it before reading */
+  fflush(stdout);
 }
 
 void display_move_error(MoveStatus status) {

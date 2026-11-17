@@ -56,7 +56,7 @@ Log: [`logs/case2_valgrind_leak.txt`](logs/case2_valgrind_leak.txt)
 - **Prediction:** if we stop right after a move that completed a box, `current` will change anyway.
 - **Experiment (conditional breakpoint):**
   ```
-  break game.c:76 if last_completed > 0
+  break game.c:72 if last_completed > 0
   run --plain --rows 1 --cols 2 < tests/scripts/case3_1x2.txt
   print last_completed      # 1  -> a box was just completed
   print current             # PLAYER_B (B completed it)

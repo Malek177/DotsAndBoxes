@@ -1,8 +1,6 @@
 /*
- * input.c - Line-based input parsing (see input.h).
+ * input.c - Reading and checking what the players type.
  */
-/* isatty() is POSIX, not ISO C, so ask for POSIX declarations explicitly
- * (needed because we compile with -std=c17 -pedantic). */
 #define _POSIX_C_SOURCE 200809L
 
 #include "input.h"
@@ -17,15 +15,11 @@
 
 #define LINE_MAX_LEN 128
 
-/* Reads one line into buf (without the '\n').
- * Returns INPUT_EOF at end of input, INPUT_BAD_FORMAT if the line was too
- * long (the rest of it is thrown away), INPUT_OK otherwise. */
+/* Reads one whole line. Lines that are too long are thrown away. */
 static InputStatus read_line(char *buf, size_t size) {
   if (fgets(buf, (int)size, stdin) == NULL) {
     return INPUT_EOF;
   }
-  /* When input comes from a file/pipe (tests, Valgrind runs) the terminal
-   * doesn't echo it, so print it ourselves to keep transcripts readable. */
   if (!isatty(STDIN_FILENO)) {
     fputs(buf, stdout);
     if (strchr(buf, '\n') == NULL) {
@@ -38,16 +32,15 @@ static InputStatus read_line(char *buf, size_t size) {
     return INPUT_OK;
   }
   if (feof(stdin)) {
-    return INPUT_OK; /* last line of a file with no trailing newline */
+    return INPUT_OK;
   }
-  /* Line longer than the buffer: discard the rest so it can't be
-   * mistaken for the next move. */
   int ch;
   while ((ch = getchar()) != '\n' && ch != EOF) {
   }
   return INPUT_BAD_FORMAT;
 }
 
+/* Reads exactly 4 numbers; anything else is rejected. */
 bool input_parse_move(const char *line, int out[4]) {
   const char *p = line;
   for (int i = 0; i < 4; i++) {
@@ -58,11 +51,9 @@ bool input_parse_move(const char *line, int out[4]) {
     errno = 0;
     long value = strtol(p, &end, 10);
     if (end == p || errno == ERANGE) {
-      return false; /* not a number, or does not fit in a long */
+      return false;
     }
 #if LONG_MAX > INT_MAX
-    /* Only needed where long is wider than int (64-bit). Guarded so 32-bit
-     * builds don't warn "comparison is always false" under -Werror. */
     if (value < INT_MIN || value > INT_MAX) {
       return false;
     }
@@ -70,7 +61,6 @@ bool input_parse_move(const char *line, int out[4]) {
     out[i] = (int)value;
     p = end;
   }
-  /* Only whitespace may follow the 4th number. */
   while (isspace((unsigned char)*p)) {
     p++;
   }
