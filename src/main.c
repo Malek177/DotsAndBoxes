@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  display_init(fancy);
+  display_init(fancy, rows, cols);
 
   for (;;) {
     GameResult result = game_play(rows, cols);
@@ -77,8 +77,7 @@ int main(int argc, char *argv[]) {
     if (result == GAME_ABORTED) {
       return EXIT_SUCCESS;
     }
-    printf("Play again? [Y/n]: ");
-    fflush(stdout);
+    display_play_again();
     bool again;
     if (input_read_yes_no(&again) == INPUT_EOF || !again) {
       printf("\nThanks for playing!\n");

@@ -3,7 +3,7 @@
  *
  * Two styles:
  *   - fancy (default): ANSI colours, screen is cleared before each turn,
- *     the last line drawn is highlighted. Works on the Alpine text console.
+ *     the last line drawn is highlighted. Works on the Linux text console.
  *   - plain (--plain): no escape codes at all, output scrolls like the
  *     sample run in the spec. Used by the automated tests and Valgrind runs.
  */
@@ -14,7 +14,8 @@
 
 #include "board.h"
 
-void display_init(bool fancy);
+/* fancy: colours, bigger centred board. rows/cols: board size in boxes. */
+void display_init(bool fancy, int rows, int cols);
 
 /* Single-letter name of a player: 'A' or 'B'. */
 char display_player_char(Player p);
@@ -38,5 +39,8 @@ void display_bad_format(void);
 void display_bonus_turn(Player p, int boxes);
 
 void display_winner(const Board *b);
+
+/* "Play again? [Y/n]: " lined up with the board. */
+void display_play_again(void);
 
 #endif /* DISPLAY_H_ */

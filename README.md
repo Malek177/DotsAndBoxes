@@ -13,8 +13,8 @@ A console version of Dots and Boxes in C, built to run on a text-only Linux VM
 
 ```sh
 make                 # builds ./dotsandboxes (warnings are errors)
-./dotsandboxes       # play (colours, screen refresh)
-./dotsandboxes --plain               # no colours / no screen clearing
+./dotsandboxes       # play (colours, bigger board centred on screen)
+./dotsandboxes --plain               # compact spec layout, no colours / clearing
 ./dotsandboxes --rows 2 --cols 3     # other board sizes (1..9)
 make test            # unit tests + full scripted games
 make valgrind        # every scripted game under Valgrind
