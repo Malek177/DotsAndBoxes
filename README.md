@@ -118,3 +118,5 @@ the real tool output in `docs/logs/`, and a GDB demo script.
 ## Team
 
 <!-- Names, IDs and who did what -->
+- Malek Sakr (GitHub: Malek177)
+- Jason Matta (Github: jasonlmatta)
