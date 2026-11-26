@@ -11,6 +11,8 @@
 #include "board.h"
 
 void display_init(bool fancy, int rows, int cols);
+
+void display_set_bot_game(bool vs_bot);
 char display_player_char(Player p);
 
 void display_clear(void);
@@ -25,5 +27,10 @@ void display_bad_format(void);
 void display_bonus_turn(Player p, int boxes);
 void display_winner(const Board *b);
 void display_play_again(void);
+
+void display_menu(void);
+void display_bad_choice(void);
+void display_bot_thinking(void);
+void display_bot_move(Line line);
 
 #endif

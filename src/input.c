@@ -97,3 +97,30 @@ InputStatus input_read_yes_no(bool *yes) {
   *yes = (*p == '\0' || *p == 'y' || *p == 'Y');
   return INPUT_OK;
 }
+
+InputStatus input_read_number(int *value) {
+  char buf[LINE_MAX_LEN];
+  InputStatus status = read_line(buf, sizeof(buf));
+  if (status != INPUT_OK) {
+    return status;
+  }
+  char *end;
+  errno = 0;
+  long v = strtol(buf, &end, 10);
+  if (end == buf || errno == ERANGE) {
+    return INPUT_BAD_FORMAT;
+  }
+#if LONG_MAX > INT_MAX
+  if (v < INT_MIN || v > INT_MAX) {
+    return INPUT_BAD_FORMAT;
+  }
+#endif
+  while (isspace((unsigned char)*end)) {
+    end++;
+  }
+  if (*end != '\0') {
+    return INPUT_BAD_FORMAT;
+  }
+  *value = (int)v;
+  return INPUT_OK;
+}

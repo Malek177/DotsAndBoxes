@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <time.h>
 #include <unistd.h>
 
 #define ANSI_RESET "\033[0m"
@@ -26,6 +27,7 @@
 #define LABEL_W 2
 #define FALLBACK_ROWS 24
 #define FALLBACK_COLS 80
+#define BOT_PAUSE_MS 700
 
 static bool fancy_output = true;
 static int cell_w = 1;
@@ -34,6 +36,7 @@ static int grid_rows = DEFAULT_ROWS;
 static int grid_cols = DEFAULT_COLS;
 static int left_pad = 0;
 static int term_width = FALLBACK_COLS;
+static bool bot_game = false;
 
 void display_init(bool fancy, int rows, int cols) {
   fancy_output = fancy;
@@ -42,6 +45,8 @@ void display_init(bool fancy, int rows, int cols) {
   cell_w = fancy ? FANCY_CELL_W : 1;
   cell_h = fancy ? FANCY_CELL_H : 1;
 }
+
+void display_set_bot_game(bool vs_bot) { bot_game = vs_bot; }
 
 /* Layout: how big the board is and how much space to leave around it. */
 static int board_width(void) { return LABEL_W + 1 + grid_cols * (cell_w + 1); }
@@ -94,6 +99,16 @@ static const char *player_color(Player p) {
 
 char display_player_char(Player p) {
   return (p == PLAYER_A) ? 'A' : 'B';
+}
+
+static void put_name(Player p) {
+  if (bot_game) {
+    put_colored(player_color(p), (p == PLAYER_A) ? "You" : "The bot");
+  } else {
+    char s[2] = {display_player_char(p), '\0'};
+    printf("Player ");
+    put_colored(player_color(p), s);
+  }
 }
 
 static bool same_line(const Line *a, Line b) {
@@ -209,11 +224,11 @@ void display_scores(const Board *b) {
   indent();
   printf("Player ");
   put_colored(ANSI_RED, "A");
-  printf(" score: %d\n", board_score(b, PLAYER_A));
+  printf(" score: %d%s\n", board_score(b, PLAYER_A), bot_game ? " (you)" : "");
   indent();
   printf("Player ");
   put_colored(ANSI_CYAN, "B");
-  printf(" score: %d\n", board_score(b, PLAYER_B));
+  printf(" score: %d%s\n", board_score(b, PLAYER_B), bot_game ? " (bot)" : "");
 }
 
 void display_separator(void) {
@@ -227,16 +242,20 @@ void display_separator(void) {
 }
 
 void display_prompt(Player p) {
-  char s[2] = {display_player_char(p), '\0'};
   indent();
-  printf("Player ");
-  put_colored(player_color(p), s);
+  if (bot_game) {
+    put_colored(player_color(p), "Your");
+    printf(" turn");
+  } else {
+    put_name(p);
+    printf("'s turn");
+  }
   if (fancy_output) {
-    printf("'s turn. Enter two dots: row col row col\n");
+    printf(". Enter two dots: row col row col\n");
     indent();
     printf("(e.g. 0 0 0 1) > ");
   } else {
-    printf("'s turn. Enter the row and column of the first dot "
+    printf(". Enter the row and column of the first dot "
            "and the second dot (e.g. 0 0 0 1): ");
   }
   fflush(stdout);
@@ -273,8 +292,9 @@ void display_bad_format(void) {
 
 void display_bonus_turn(Player p, int boxes) {
   indent();
-  printf("Player %c completed %d box%s and plays again!\n",
-         display_player_char(p), boxes, boxes == 1 ? "" : "es");
+  put_name(p);
+  printf(" completed %d box%s and %s again!\n", boxes, boxes == 1 ? "" : "es",
+         (bot_game && p == PLAYER_A) ? "play" : "plays");
 }
 
 void display_play_again(void) {
@@ -289,12 +309,47 @@ void display_winner(const Board *b) {
   display_separator();
   indent();
   if (a > bs) {
-    put_colored(ANSI_RED, "Player A wins!");
+    put_colored(ANSI_RED, bot_game ? "You win!" : "Player A wins!");
   } else if (bs > a) {
-    put_colored(ANSI_CYAN, "Player B wins!");
+    put_colored(ANSI_CYAN, bot_game ? "The bot wins!" : "Player B wins!");
   } else {
     put_colored(ANSI_BOLD, "It's a tie!");
   }
   printf(" Final score: A %d - %d B\n", a, bs);
   display_separator();
+}
+
+/* Game mode menu and bot messages. */
+void display_menu(void) {
+  indent();
+  printf("1) Two players\n");
+  indent();
+  printf("2) Play against the bot\n");
+  indent();
+  printf("Choose 1 or 2: ");
+  fflush(stdout);
+}
+
+void display_bad_choice(void) {
+  indent();
+  put_colored(ANSI_RED, "Please type 1 or 2.");
+  printf("\n");
+}
+
+void display_bot_thinking(void) {
+  indent();
+  printf("The bot is thinking...\n");
+  fflush(stdout);
+  if (fancy_output) {
+    struct timespec pause = {0, BOT_PAUSE_MS * 1000000L};
+    nanosleep(&pause, NULL);
+  }
+}
+
+void display_bot_move(Line line) {
+  int r2 = (line.orient == LINE_VERTICAL) ? line.r + 1 : line.r;
+  int c2 = (line.orient == LINE_HORIZONTAL) ? line.c + 1 : line.c;
+  indent();
+  put_colored(ANSI_CYAN, "The bot");
+  printf(" played %d %d %d %d\n", line.r, line.c, r2, c2);
 }
