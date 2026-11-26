@@ -36,6 +36,9 @@ typedef struct Board Board;
 Board *board_create(int rows, int cols);
 void board_destroy(Board *b);
 
+/* A separate copy the bot can try moves on. */
+Board *board_copy(const Board *b);
+
 int board_rows(const Board *b);
 int board_cols(const Board *b);
 
@@ -48,9 +51,13 @@ bool board_has_line(const Board *b, Line line);
 /* Draws a line and returns how many boxes it completed (0, 1 or 2). */
 int board_draw_line(Board *b, Line line, Player p);
 
+/* Takes back the most recently drawn line and any boxes it completed. */
+void board_undo_line(Board *b, Line line);
+
 int board_box_sides(const Board *b, int r, int c);
 Player board_box_owner(const Board *b, int r, int c);
 int board_score(const Board *b, Player p);
 bool board_is_full(const Board *b);
+int board_lines_left(const Board *b);
 
 #endif

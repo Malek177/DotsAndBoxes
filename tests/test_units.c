@@ -148,6 +148,77 @@ static void test_full_default_board(void) {
   board_destroy(b);
 }
 
+static void test_copy_and_undo(void) {
+  printf("test_copy_and_undo\n");
+  /* 1x2 board: the middle line is shared by both boxes. */
+  Board *b = board_create(1, 2);
+  CHECK(play(b, 0, 0, 0, 1, PLAYER_A) == 0);
+  CHECK(play(b, 1, 0, 1, 1, PLAYER_A) == 0);
+  CHECK(play(b, 0, 0, 1, 0, PLAYER_A) == 0);
+  CHECK(play(b, 0, 1, 0, 2, PLAYER_A) == 0);
+  CHECK(play(b, 1, 1, 1, 2, PLAYER_A) == 0);
+  CHECK(play(b, 0, 2, 1, 2, PLAYER_A) == 0);
+  CHECK(board_lines_left(b) == 1);
+
+  Board *copy = board_copy(b);
+  CHECK(copy != NULL);
+  CHECK(board_lines_left(copy) == 1);
+  Line middle = {LINE_VERTICAL, 0, 1};
+  CHECK(board_draw_line(copy, middle, PLAYER_B) == 2);
+  CHECK(board_score(copy, PLAYER_B) == 2);
+  CHECK(board_score(b, PLAYER_B) == 0);
+  CHECK(!board_has_line(b, middle));
+
+  /* Undo takes back the line and both boxes it completed. */
+  board_undo_line(copy, middle);
+  CHECK(!board_has_line(copy, middle));
+  CHECK(board_score(copy, PLAYER_B) == 0);
+  CHECK(board_box_owner(copy, 0, 0) == PLAYER_NONE);
+  CHECK(board_box_owner(copy, 0, 1) == PLAYER_NONE);
+  CHECK(board_box_sides(copy, 0, 0) == 3);
+  CHECK(board_lines_left(copy) == 1);
+  board_destroy(copy);
+  board_destroy(b);
+
+  /* Undoing all 49 lines must give back an empty board. */
+  b = board_create(4, 5);
+  Line drawn[49];
+  int n = 0;
+  Player p = PLAYER_A;
+  for (int r = 0; r <= 4; r++) {
+    for (int c = 0; c < 5; c++) {
+      Line h = {LINE_HORIZONTAL, r, c};
+      drawn[n++] = h;
+      board_draw_line(b, h, p);
+      p = (p == PLAYER_A) ? PLAYER_B : PLAYER_A;
+    }
+  }
+  for (int r = 0; r < 4; r++) {
+    for (int c = 0; c <= 5; c++) {
+      Line v = {LINE_VERTICAL, r, c};
+      drawn[n++] = v;
+      board_draw_line(b, v, p);
+      p = (p == PLAYER_A) ? PLAYER_B : PLAYER_A;
+    }
+  }
+  CHECK(n == 49);
+  CHECK(board_is_full(b));
+  CHECK(board_score(b, PLAYER_A) + board_score(b, PLAYER_B) == 20);
+  while (n > 0) {
+    board_undo_line(b, drawn[--n]);
+  }
+  CHECK(board_lines_left(b) == 49);
+  CHECK(board_score(b, PLAYER_A) == 0);
+  CHECK(board_score(b, PLAYER_B) == 0);
+  for (int r = 0; r < 4; r++) {
+    for (int c = 0; c < 5; c++) {
+      CHECK(board_box_sides(b, r, c) == 0);
+      CHECK(board_box_owner(b, r, c) == PLAYER_NONE);
+    }
+  }
+  board_destroy(b);
+}
+
 static void test_parse_move(void) {
   printf("test_parse_move\n");
   int v[4];
@@ -170,6 +241,7 @@ int main(void) {
   test_single_box();
   test_double_box();
   test_full_default_board();
+  test_copy_and_undo();
   test_parse_move();
   printf("%d checks, %d failed\n", checks_run, checks_failed);
   return checks_failed == 0 ? EXIT_SUCCESS : EXIT_FAILURE;

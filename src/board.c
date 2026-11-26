@@ -5,6 +5,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 
 struct Board {
   int rows;
@@ -65,6 +66,19 @@ void board_destroy(Board *b) {
   free(b);
 }
 
+Board *board_copy(const Board *b) {
+  Board *copy = board_create(b->rows, b->cols);
+  if (copy == NULL) {
+    return NULL;
+  }
+  memcpy(copy->h, b->h, (size_t)(b->rows + 1) * b->cols);
+  memcpy(copy->v, b->v, (size_t)b->rows * (b->cols + 1));
+  memcpy(copy->owner, b->owner, (size_t)b->rows * b->cols * sizeof(Player));
+  memcpy(copy->score, b->score, sizeof(b->score));
+  copy->lines_drawn = b->lines_drawn;
+  return copy;
+}
+
 int board_rows(const Board *b) { return b->rows; }
 int board_cols(const Board *b) { return b->cols; }
 
@@ -96,6 +110,8 @@ int board_score(const Board *b, Player p) {
 }
 
 bool board_is_full(const Board *b) { return b->lines_drawn == b->total_lines; }
+
+int board_lines_left(const Board *b) { return b->total_lines - b->lines_drawn; }
 
 /* Checking and making moves. */
 static bool dot_in_range(const Board *b, int r, int c) {
@@ -168,4 +184,37 @@ int board_draw_line(Board *b, Line line, Player p) {
   }
   b->lines_drawn++;
   return completed;
+}
+
+/* Undo goes in reverse order, so an owned box here was taken by this line. */
+static void unclaim(Board *b, int r, int c) {
+  Player owner = b->owner[box_index(b, r, c)];
+  if (owner != PLAYER_NONE) {
+    b->score[owner]--;
+    b->owner[box_index(b, r, c)] = PLAYER_NONE;
+  }
+}
+
+void board_undo_line(Board *b, Line line) {
+  assert(line_in_range(b, line));
+  assert(board_has_line(b, line));
+
+  if (line.orient == LINE_HORIZONTAL) {
+    b->h[h_index(b, line.r, line.c)] = 0;
+    if (line.r > 0) {
+      unclaim(b, line.r - 1, line.c);
+    }
+    if (line.r < b->rows) {
+      unclaim(b, line.r, line.c);
+    }
+  } else {
+    b->v[v_index(b, line.r, line.c)] = 0;
+    if (line.c > 0) {
+      unclaim(b, line.r, line.c - 1);
+    }
+    if (line.c < b->cols) {
+      unclaim(b, line.r, line.c);
+    }
+  }
+  b->lines_drawn--;
 }
