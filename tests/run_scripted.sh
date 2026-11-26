@@ -4,6 +4,7 @@
 #
 #   NAME.in        input typed by the "players", one line per move
 #   NAME.expected  text that MUST appear in the output (e.g. final score)
+#   NAME.args      (optional) extra options, e.g. --rows 2 --cols 2
 #
 # Usage: sh tests/run_scripted.sh ./dotsandboxes
 
@@ -15,7 +16,8 @@ fail=0
 for input in "$DIR"/*.in; do
   name=$(basename "$input" .in)
   expected="$DIR/$name.expected"
-  output=$("$GAME" --plain < "$input")
+  args=$(cat "$DIR/$name.args" 2>/dev/null)
+  output=$("$GAME" --plain $args < "$input")
   status=$?
   want=$(cat "$expected")
   if [ "$status" -eq 0 ] && printf '%s\n' "$output" | grep -qF "$want"; then

@@ -69,8 +69,9 @@ valgrind: $(OUTPUT) tests/test_units tests/test_bot
 		./tests/test_bot
 	for f in tests/scripts/*.in; do \
 		echo "== valgrind: $$f"; \
+		args=$$(cat $${f%.in}.args 2>/dev/null); \
 		valgrind --leak-check=full --show-leak-kinds=all --error-exitcode=1 \
-			-q ./$(OUTPUT) --plain < $$f > /dev/null || exit 1; \
+			-q ./$(OUTPUT) --plain $$args < $$f > /dev/null || exit 1; \
 	done
 	@echo "Valgrind: no errors, no leaks."
 
