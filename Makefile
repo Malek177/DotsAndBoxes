@@ -1,7 +1,7 @@
 # Makefile - Dots and Boxes (CMPS 241 project)
 #
 #   make            build the game  -> ./dotsandboxes
-#   make test       build + run unit tests and scripted full-game tests
+#   make test       build + run unit tests, bot tests and scripted games
 #   make valgrind   run full scripted games under Valgrind (must be clean)
 #   make gdb        start the game inside GDB
 #   make install    copy the game to /usr/local/bin (used on the VM)
@@ -16,6 +16,7 @@ PREFIX = /usr/local
 
 OBJECTS = src/main.o src/game.o src/board.o src/bot.o src/display.o src/input.o
 TEST_OBJECTS = tests/test_units.o src/board.o src/input.o
+BOT_TEST_OBJECTS = tests/test_bot.o src/board.o src/bot.o
 
 $(OUTPUT): $(OBJECTS)
 	$(CC) $(CFLAGS) -o $@ $^
@@ -46,17 +47,26 @@ tests/test_units.o: tests/test_units.c src/board.h src/input.h
 tests/test_units: $(TEST_OBJECTS)
 	$(CC) $(CFLAGS) -o $@ $^
 
+tests/test_bot.o: tests/test_bot.c src/board.h src/bot.h
+	$(CC) $(CFLAGS) -Isrc -c $< -o $@
+
+tests/test_bot: $(BOT_TEST_OBJECTS)
+	$(CC) $(CFLAGS) -o $@ $^
+
 .PHONY: all test valgrind gdb install clean
 
 all: $(OUTPUT)
 
-test: $(OUTPUT) tests/test_units
+test: $(OUTPUT) tests/test_units tests/test_bot
 	./tests/test_units
+	./tests/test_bot
 	sh tests/run_scripted.sh ./$(OUTPUT)
 
-valgrind: $(OUTPUT) tests/test_units
+valgrind: $(OUTPUT) tests/test_units tests/test_bot
 	valgrind --leak-check=full --show-leak-kinds=all --error-exitcode=1 \
 		./tests/test_units
+	valgrind --leak-check=full --show-leak-kinds=all --error-exitcode=1 \
+		./tests/test_bot
 	for f in tests/scripts/*.in; do \
 		echo "== valgrind: $$f"; \
 		valgrind --leak-check=full --show-leak-kinds=all --error-exitcode=1 \
@@ -71,4 +81,4 @@ install: $(OUTPUT)
 	install -m 755 $(OUTPUT) $(PREFIX)/bin/$(OUTPUT)
 
 clean:
-	@rm -f src/*.o tests/*.o tests/test_units $(OUTPUT)
+	@rm -f src/*.o tests/*.o tests/test_units tests/test_bot $(OUTPUT)

@@ -2,6 +2,7 @@
 *.o
 dotsandboxes
 tests/test_units
+tests/test_bot
 
 # Editor / OS junk
 *~
