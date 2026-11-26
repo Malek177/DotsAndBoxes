@@ -1,5 +1,5 @@
 /*
- * game.c - The two-player game loop: turns, bonus turns and the winner.
+ * game.c - The game loop: turns, bonus turns, bot moves and the winner.
  */
 #include "game.h"
 
@@ -7,8 +7,11 @@
 #include <stdio.h>
 
 #include "board.h"
+#include "bot.h"
 #include "display.h"
 #include "input.h"
+
+#define BOT_PLAYER PLAYER_B
 
 static Player other_player(Player p) {
   return (p == PLAYER_A) ? PLAYER_B : PLAYER_A;
@@ -35,7 +38,7 @@ static bool ask_for_move(const Board *b, Player current, Line *out) {
   }
 }
 
-GameResult game_play(int rows, int cols) {
+GameResult game_play(int rows, int cols, GameMode mode) {
   Board *board = board_create(rows, cols);
   if (board == NULL) {
     fprintf(stderr, "Error: could not create a %dx%d board.\n", rows, cols);
@@ -46,7 +49,9 @@ GameResult game_play(int rows, int cols) {
   Line last = {LINE_HORIZONTAL, 0, 0};
   bool has_last = false;
   int last_completed = 0;
+  bool bot_moved = false;
   GameResult result = GAME_FINISHED;
+  display_set_bot_game(mode == MODE_VS_BOT);
 
   /* One turn per loop, until every box is taken. */
   display_title();
@@ -56,14 +61,29 @@ GameResult game_play(int rows, int cols) {
     display_separator();
     display_scores(board);
     display_separator();
+    if (bot_moved) {
+      display_bot_move(last);
+    }
     if (last_completed > 0) {
       display_bonus_turn(current, last_completed);
     }
 
-    if (!ask_for_move(board, current, &last)) {
-      printf("\nInput closed - game aborted.\n");
-      result = GAME_ABORTED;
-      break;
+    if (mode == MODE_VS_BOT && current == BOT_PLAYER) {
+      display_bot_thinking();
+      last = bot_choose_move(board, BOT_PLAYER, NULL);
+      if (board_has_line(board, last)) {
+        fprintf(stderr, "Error: the bot chose a line that is already drawn.\n");
+        result = GAME_ERROR;
+        break;
+      }
+      bot_moved = true;
+    } else {
+      if (!ask_for_move(board, current, &last)) {
+        printf("\nInput closed - game aborted.\n");
+        result = GAME_ABORTED;
+        break;
+      }
+      bot_moved = false;
     }
     has_last = true;
 
@@ -78,6 +98,9 @@ GameResult game_play(int rows, int cols) {
   if (result == GAME_FINISHED) {
     display_clear();
     display_board(board, has_last ? &last : NULL);
+    if (bot_moved) {
+      display_bot_move(last);
+    }
     display_winner(board);
   }
   board_destroy(board);

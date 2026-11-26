@@ -26,7 +26,7 @@ $(OUTPUT): $(OBJECTS)
 src/main.o: src/main.c src/board.h src/display.h src/game.h src/input.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-src/game.o: src/game.c src/game.h src/board.h src/display.h src/input.h
+src/game.o: src/game.c src/game.h src/board.h src/bot.h src/display.h src/input.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 src/board.o: src/board.c src/board.h

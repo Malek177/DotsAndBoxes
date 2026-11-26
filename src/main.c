@@ -21,6 +21,23 @@ static void print_usage(const char *prog) {
          DEFAULT_COLS);
 }
 
+static bool choose_mode(GameMode *mode) {
+  display_clear();
+  for (;;) {
+    display_menu();
+    int choice;
+    InputStatus in = input_read_number(&choice);
+    if (in == INPUT_EOF) {
+      return false;
+    }
+    if (in == INPUT_OK && (choice == 1 || choice == 2)) {
+      *mode = (choice == 1) ? MODE_TWO_PLAYERS : MODE_VS_BOT;
+      return true;
+    }
+    display_bad_choice();
+  }
+}
+
 static int parse_size(const char *text) {
   char *end;
   long value = strtol(text, &end, 10);
@@ -67,7 +84,12 @@ int main(int argc, char *argv[]) {
 
   /* Play games until the players say no. */
   for (;;) {
-    GameResult result = game_play(rows, cols);
+    GameMode mode;
+    if (!choose_mode(&mode)) {
+      printf("\nThanks for playing!\n");
+      return EXIT_SUCCESS;
+    }
+    GameResult result = game_play(rows, cols, mode);
     if (result == GAME_ERROR) {
       return EXIT_FAILURE;
     }
