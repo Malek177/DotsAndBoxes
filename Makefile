@@ -14,7 +14,7 @@ CFLAGS = -Wall -Wextra -Werror -pedantic -std=c17 -g -O0
 OUTPUT = dotsandboxes
 PREFIX = /usr/local
 
-OBJECTS = src/main.o src/game.o src/board.o src/display.o src/input.o
+OBJECTS = src/main.o src/game.o src/board.o src/bot.o src/display.o src/input.o
 TEST_OBJECTS = tests/test_units.o src/board.o src/input.o
 
 $(OUTPUT): $(OBJECTS)
@@ -29,6 +29,9 @@ src/game.o: src/game.c src/game.h src/board.h src/display.h src/input.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 src/board.o: src/board.c src/board.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+src/bot.o: src/bot.c src/bot.h src/board.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 src/display.o: src/display.c src/display.h src/board.h
