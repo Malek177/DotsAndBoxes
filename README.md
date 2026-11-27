@@ -6,24 +6,29 @@ A console version of Dots and Boxes in C, built to run on a text-only Linux VM
 | Sprint | Content | Status |
 |---|---|---|
 | 1 | Two players (A vs B), 4×5 board, Makefile, tests, GDB/Valgrind, VM auto-start | ✅ |
-| 2 | Hard-level bot + complexity analysis | ⏳ |
+| 2 | Hard-level bot (minimax + alpha-beta pruning) + complexity analysis | ✅ |
 | 3 (bonus) | Network play + multithreading | ⏳ |
 
 ## Build and run
 
 ```sh
 make                 # builds ./dotsandboxes (warnings are errors)
-./dotsandboxes       # play (colours, bigger board centred on screen)
+./dotsandboxes       # play: choose 1 (two players) or 2 (against the bot)
 ./dotsandboxes --plain               # compact spec layout, no colours / clearing
 ./dotsandboxes --rows 2 --cols 3     # other board sizes (1..9)
-make test            # unit tests + full scripted games
-make valgrind        # every scripted game under Valgrind
+make test            # unit tests, bot tests + full scripted games
+make valgrind        # unit tests, bot tests and every scripted game under Valgrind
+make arena           # measure the bot: wins, time and search depth per move
 make gdb             # start the game in GDB
 ```
 
 **How to play:** type the row and column of two neighbouring dots, e.g.
 `0 0 0 1` draws the line from dot (0,0) to dot (0,1). Dots can be given in either
 order. Completing a box claims it, and you play again. Most boxes wins.
+
+**Against the bot:** choose `2` at the menu. You are Player A and move first; the
+bot is Player B. After each of its moves the board is redrawn and the bot's move is
+printed (e.g. `The bot played 1 0 1 1`). How the bot works: [docs/BOT.md](docs/BOT.md).
 
 ```
   0 1 2 3 4 5
@@ -38,18 +43,23 @@ Running on the VM: see [docs/VM_SETUP.md](docs/VM_SETUP.md).
 
 ```
 src/
-  main.c       command-line options, "play again" loop
-  game.c/.h    turn order, bonus turns, end of game
-  board.c/.h   board state + rules (NO input/output) ← reused by the bot in Sprint 2
+  main.c       command-line options, game mode menu, "play again" loop
+  game.c/.h    turn order, bonus turns, bot turns, end of game
+  board.c/.h   board state + rules (NO input/output), copy + undo for the bot
+  bot.c/.h     the hard bot: minimax with alpha-beta pruning
   display.c/.h everything printed to the screen (colours, board drawing)
   input.c/.h   safe line-based input parsing (fgets + strtol)
 tests/
-  test_units.c       177 checks on the rules and the parser
+  test_units.c       242 checks on the rules, copy/undo and the parser
+  test_bot.c         bot tests, incl. comparing it with plain minimax
+  bot_arena.c        bot vs random and greedy players (make arena)
   run_scripted.sh    plays complete games from tests/scripts/*.in
   gdb_demo.gdb       GDB walkthrough used in the presentation
+  gdb_bot.gdb        GDB: watch the bot's search depth by depth
 scripts/
   install_autostart.sh   start the game on boot (Ubuntu systemd; also supports Alpine)
 docs/
+  BOT.md           the bot's strategy and its complexity
   DEBUGGING.md     our GDB/Valgrind strategy, with real session logs
   VM_SETUP.md      Ubuntu VM setup, step by step, and problems we fixed
 .github/workflows/ci.yml   build + tests + Valgrind on every push
@@ -59,13 +69,15 @@ Module dependencies (arrows = "includes"):
 
 ```
 main ──► game ──► board
+  │        ├────► bot ──► board
   │        ├────► display ──► board
   │        └────► input
   └────► display, input
 ```
 
-`board` depends on nothing else, which is why it can be unit-tested alone and
-reused unchanged by the Sprint 2 bot.
+`board` depends on nothing else, which is why it can be unit-tested alone. The
+bot only uses `board` too: it never prints or reads anything, so it can be tested
+without the rest of the game.
 
 ## Data structure
 
@@ -98,13 +110,21 @@ Let R×C be the board size (boxes) and E = R(C+1) + (R+1)C the number of lines
 The key observation: a new line can only affect the boxes on its two sides,
 so there is no need to look at the rest of the board.
 
+The bot's strategy and its complexity (minimax O(b^d), alpha-beta about
+O(b^(d/2)), our budget O(N·E) per move, with measurements) are in
+[docs/BOT.md](docs/BOT.md).
+
 ## Testing
 
 * `tests/test_units.c`: board creation, every invalid-move type, single box,
   **one line completing two boxes**, a full 4×5 board (49 lines → 20 boxes), and the
-  input parser (letters, missing numbers, extra numbers, numbers too big for an int).
+  input parser (letters, missing numbers, extra numbers, numbers too big for an int),
+  and copying a board / undoing lines (undoing all 49 lines gives back an empty board).
+* `tests/test_bot.c`: the bot takes free boxes, gives the same answers as a plain
+  minimax with no pruning, only plays free lines and never changes the real board.
 * `tests/run_scripted.sh`: 4 complete random games (A wins, B wins, a 10–10 tie, and a
-  game with invalid input mixed in) plus an aborted game. Each game is saved with its known final
+  game with invalid input mixed in), an aborted game, a full game against the bot on 2×2,
+  and junk typed at the menu. Each game is saved with its known final
   score, and the tests check that the game ends with that score.
 * We checked that the tests can fail: breaking the bonus-turn rule makes 2 scripted
   games fail.
