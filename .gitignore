@@ -3,6 +3,7 @@
 dotsandboxes
 tests/test_units
 tests/test_bot
+tests/bot_arena
 
 # Editor / OS junk
 *~

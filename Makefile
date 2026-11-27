@@ -3,6 +3,7 @@
 #   make            build the game  -> ./dotsandboxes
 #   make test       build + run unit tests, bot tests and scripted games
 #   make valgrind   run full scripted games under Valgrind (must be clean)
+#   make arena      measure the bot: wins, time and depth per move
 #   make gdb        start the game inside GDB
 #   make install    copy the game to /usr/local/bin (used on the VM)
 #   make clean      remove everything that was built
@@ -17,6 +18,7 @@ PREFIX = /usr/local
 OBJECTS = src/main.o src/game.o src/board.o src/bot.o src/display.o src/input.o
 TEST_OBJECTS = tests/test_units.o src/board.o src/input.o
 BOT_TEST_OBJECTS = tests/test_bot.o src/board.o src/bot.o
+ARENA_OBJECTS = tests/bot_arena.o src/board.o src/bot.o
 
 $(OUTPUT): $(OBJECTS)
 	$(CC) $(CFLAGS) -o $@ $^
@@ -53,7 +55,13 @@ tests/test_bot.o: tests/test_bot.c src/board.h src/bot.h
 tests/test_bot: $(BOT_TEST_OBJECTS)
 	$(CC) $(CFLAGS) -o $@ $^
 
-.PHONY: all test valgrind gdb install clean
+tests/bot_arena.o: tests/bot_arena.c src/board.h src/bot.h
+	$(CC) $(CFLAGS) -Isrc -c $< -o $@
+
+tests/bot_arena: $(ARENA_OBJECTS)
+	$(CC) $(CFLAGS) -o $@ $^
+
+.PHONY: all test valgrind arena gdb install clean
 
 all: $(OUTPUT)
 
@@ -75,6 +83,9 @@ valgrind: $(OUTPUT) tests/test_units tests/test_bot
 	done
 	@echo "Valgrind: no errors, no leaks."
 
+arena: tests/bot_arena
+	./tests/bot_arena
+
 gdb: $(OUTPUT)
 	gdb ./$(OUTPUT)
 
@@ -82,4 +93,4 @@ install: $(OUTPUT)
 	install -m 755 $(OUTPUT) $(PREFIX)/bin/$(OUTPUT)
 
 clean:
-	@rm -f src/*.o tests/*.o tests/test_units tests/test_bot $(OUTPUT)
+	@rm -f src/*.o tests/*.o tests/test_units tests/test_bot tests/bot_arena $(OUTPUT)
