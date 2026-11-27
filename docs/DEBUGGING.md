@@ -79,6 +79,52 @@ boxes, with `backtrace` showing `main → game_play → board_draw_line → try_
 
 Log: [`logs/gdb_demo_session.txt`](logs/gdb_demo_session.txt)
 
+## Case 4 — Bot test failing for no visible reason (Valgrind)
+
+*Sprint 2, a real bug in our own test code.*
+
+- **Failure:** `test_games_vs_random` in `tests/test_bot.c` reported `FAIL ... ok`
+  for every game, even though the bot's moves looked correct.
+- **Hypothesis:** the check "the bot did not change the board" compares two `Snapshot`
+  structs, and some part of them is never filled in.
+- **Prediction:** Valgrind will report a decision based on uninitialised memory inside
+  `same_snapshot`.
+- **Experiment:** `valgrind --track-origins=yes ./tests/test_bot`
+  ```
+  Conditional jump or move depends on uninitialised value(s)
+     at same_snapshot (test_bot.c:168)
+     by test_games_vs_random (test_bot.c:194)
+   Uninitialised value was created by a stack allocation
+     at test_games_vs_random (test_bot.c:177)
+  ```
+- **Diagnosis:** `Snapshot` has room for 200 lines and 81 boxes, but a small board only
+  fills a few of them. The rest held leftover stack values, different in `before` and
+  `after`, so the two snapshots never matched.
+- **Fix + confirm:** clear the struct first (`memset(s, 0, sizeof(*s))` in `snapshot()`).
+  All 110 bot checks pass and Valgrind reports 0 errors.
+
+Log: [`logs/case4_valgrind_uninitialised.txt`](logs/case4_valgrind_uninitialised.txt)
+
+## GDB demo: watching the bot think
+
+`gdb -q -x tests/gdb_bot.gdb ./dotsandboxes` plays `0 0 0 1` on the 4×5 board and stops
+inside `bot_choose_move`. A `dprintf` (a breakpoint that prints and keeps going) on the
+line after each finished depth shows iterative deepening live:
+
+```
+depth  1 finished: best value 0, positions so far 48
+depth  2 finished: best value 0, positions so far 190
+depth  3 finished: best value 0, positions so far 2586
+depth  4 finished: best value 0, positions so far 9304
+depth  5 finished: best value 0, positions so far 114772
+$4 = {me = PLAYER_B, nodes = 114772, budget = 250000, out_of_budget = false}
+```
+
+Depth 6 would cost at least twice depth 5 and would not fit in the 250,000 budget, so the
+bot stops at depth 5 instead of starting a search it would have to throw away.
+
+Log: [`logs/gdb_bot_session.txt`](logs/gdb_bot_session.txt)
+
 ---
 
 ## Real bugs we hit during development
@@ -87,3 +133,15 @@ Log: [`logs/gdb_demo_session.txt`](logs/gdb_demo_session.txt)
 
 1. **GDB `continue 6` did nothing.** While writing the GDB demo we used `continue 6` to skip to the 7th move, but GDB stopped at the next call. Hypothesis: `continue N` only sets an ignore count when stopped *at a breakpoint*; after `finish` we were not. Fix: use the explicit `ignore 1 5` command. Confirmed: stops at the 7th move.
 2. **Possible `-Werror` failure on 32-bit Linux.** `value < INT_MIN` on a `long` is "always false" where `long` is 32-bit, and GCC can warn about that; with `-Werror` the build would fail (= zero grade). Fix: guard the check with `#if LONG_MAX > INT_MAX`.
+3. **The first bot was too slow (Sprint 2).** It took up to 1.9 s per move. Hypothesis:
+   iterative deepening kept starting a new depth that could never finish in the budget,
+   and that work was thrown away. Experiment: printed depth and positions per move.
+   Fix: stop when the next depth (at least about twice the last one) cannot fit, and find
+   free boxes by scanning the boxes directly instead of listing every move. Confirmed with
+   `make arena`: about 0.15 s per move on average, 0.6 s at most.
+4. **Big boards were slower (Sprint 2).** A 9×9 move took 1.7 s because each position
+   costs about one step per line. Fix: the budget is divided by the number of lines, so
+   every board size takes about the same time per move.
+5. **Menu error message disappeared (Sprint 2).** In fancy mode, typing `x` at the menu
+   showed "Please type 1 or 2." and the screen was cleared straight away. Fix: clear the
+   screen once before the menu, not every time it is shown again.

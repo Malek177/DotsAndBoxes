@@ -1,0 +1,19 @@
+Breakpoint 1 at 0x3523: file src/bot.c, line 178.
+Dprintf 2 at 0x3873: file src/bot.c, line 223.
+Breakpoint 3 at 0x3956: file src/bot.c, line 235.
+
+Breakpoint 1, bot_choose_move (board=0x55555555f2c0, me=PLAYER_B, stats=0x0) at src/bot.c:178
+178	Line bot_choose_move(const Board *board, Player me, BotStats *stats) {
+$1 = PLAYER_B
+$2 = 48
+depth  1 finished: best value 0, positions so far 48
+depth  2 finished: best value 0, positions so far 190
+depth  3 finished: best value 0, positions so far 2586
+depth  4 finished: best value 0, positions so far 9304
+depth  5 finished: best value 0, positions so far 114772
+
+Breakpoint 3, bot_choose_move (board=0x55555555f2c0, me=PLAYER_B, stats=0x0) at src/bot.c:235
+235	  board_destroy(b);
+$3 = {orient = LINE_HORIZONTAL, r = 0, c = 1}
+$4 = {me = PLAYER_B, nodes = 114772, budget = 250000, out_of_budget = false}
+[Inferior 1 (process 375) exited normally]
